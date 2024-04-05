@@ -34,14 +34,16 @@ public class Folder
         return folder;
     }
     
-    public List<Difference> GetDifferences()
+    public Queue<Difference> GetDifferences()
     {   
-        List<Difference> differences = [];
+        Queue<Difference> differences = [];
 
         foreach(var folder in SubFolders)
         {
             if(!Directory.Exists(folder.Key))continue;
-            differences.AddRange(folder.Value.GetDifferences());
+            foreach(var item in folder.Value.GetDifferences()){
+                differences.Enqueue(item);
+            }
         }
 
         var dirFolders = Directory.GetDirectories(FolderPath);
@@ -55,13 +57,13 @@ public class Folder
                 continue;
             }
 
-            differences.Add(new Difference(DifferenceType.NewFolder, newFolder));
+            differences.Enqueue(new Difference(DifferenceType.NewFolder, newFolder));
             SubFolders.Add(newFolder, folder);
         }
 
         var deletedFolders = SubFolders.Keys.Where(x => !dirFolders.Contains(x)).ToList();
         foreach(var deletedFolder in deletedFolders){
-            differences.Add(new Difference(DifferenceType.RemoveFolder, deletedFolder));
+            differences.Enqueue(new Difference(DifferenceType.RemoveFolder, deletedFolder));
             SubFolders.Remove(deletedFolder);
         }
 
@@ -70,23 +72,24 @@ public class Folder
         foreach(var file in Files.ToList()){
             if(!File.Exists(file.Key)){
                 filesToRemove.Add(file.Key);
-                differences.Add(new Difference(DifferenceType.RemoveFile, file.Key));
+                differences.Enqueue(new Difference(DifferenceType.RemoveFile, file.Key));
                 continue;
             }
 
             var lastWrite = File.GetLastWriteTime(file.Key);
             if(lastWrite != file.Value){
                 Files[file.Key] = lastWrite;
-                differences.Add(new Difference(DifferenceType.FileDiff, file.Key));
+                differences.Enqueue(new Difference(DifferenceType.FileDiff, file.Key));
             }
         }
         
         foreach(var file in dirFiles.Where(x => !Files.ContainsKey(x))){
             Files[file] = File.GetLastWriteTime(file);
-            differences.Add(new Difference(DifferenceType.FileDiff, file));
+            differences.Enqueue(new Difference(DifferenceType.FileDiff, file));
         }
 
         filesToRemove.ForEach(x => Files.Remove(x));
+
         return differences;
     }
 }

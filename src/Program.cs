@@ -73,51 +73,56 @@ if(mainFolder == null){
     PressAnyKeyToContinue();
     return;
 }
+Session session = new();
+
+async Task OpenConnection(){
+    while(true){
+        try{
+            session.Open(options);
+            break;
+        }
+        catch(Exception ex){
+            Console.WriteLine("Could not open connection " + ex.ToString());
+            Console.WriteLine("Retrting in 2 secconds...");
+            await Task.Delay(2000);
+        }
+    }
+}
+await OpenConnection();
 
 Console.WriteLine("Program started");
 while(true){
     var differences = mainFolder.GetDifferences();
-    if(differences.Count > 0){
-        using(Session session = new Session()){
-            while(true){
+    while(differences.TryDequeue(out var diff)){
+        if(!session.Opened)
+            await OpenConnection();
+
+        var remotePath = RemotePath.TranslateLocalPathToRemote(diff.Path, Settings.Instance.LocalFolder, Settings.Instance.RemoteFolder);
+        switch(diff.Type){
+            case DifferenceType.RemoveFolder:
+                Console.WriteLine("Removing folder " + remotePath);
+                if(session.FileExists(remotePath))
+                    session.RemoveFiles(remotePath);
+                break;
+            case DifferenceType.NewFolder:
+                Console.WriteLine("Creating folder " + remotePath);
+                session.CreateDirectory(remotePath);
+                break;
+            case DifferenceType.FileDiff:
+                Console.WriteLine("Copying file " + remotePath);
+                var fileStream = new FileStream(diff.Path, FileMode.Open);
                 try{
-                    session.Open(options);
-                    break;
-                }catch(Exception ex){
-                    Console.WriteLine(ex.ToString());
-                    Console.WriteLine("Could not open session tring again in 2 secconds");
-                    await Task.Delay(2000);
+                    session.PutFile(fileStream, remotePath);
                 }
-            }
-            foreach(var diff in differences){
-                var remotePath = RemotePath.TranslateLocalPathToRemote(diff.Path, Settings.Instance.LocalFolder, Settings.Instance.RemoteFolder);
-                switch(diff.Type){
-                    case DifferenceType.RemoveFolder:
-                        Console.WriteLine("Removing folder " + remotePath);
-                        if(session.FileExists(remotePath))
-                            session.RemoveFiles(remotePath);
-                        break;
-                    case DifferenceType.NewFolder:
-                        Console.WriteLine("Creating folder " + remotePath);
-                        session.CreateDirectory(remotePath);
-                        break;
-                    case DifferenceType.FileDiff:
-                        Console.WriteLine("Copying file " + remotePath);
-                        var fileStream = new FileStream(diff.Path, FileMode.Open);
-                        try{
-                            session.PutFile(fileStream, remotePath);
-                        }
-                        finally{
-                            await fileStream.DisposeAsync();
-                        }
-                        break;
-                    case DifferenceType.RemoveFile:
-                        Console.WriteLine("Removing file " + remotePath);
-                        if(session.FileExists(remotePath))
-                            session.RemoveFile(remotePath);
-                        break;
+                finally{
+                    await fileStream.DisposeAsync();
                 }
-            }
+                break;
+            case DifferenceType.RemoveFile:
+                Console.WriteLine("Removing file " + remotePath);
+                if(session.FileExists(remotePath))
+                    session.RemoveFile(remotePath);
+                break;
         }
     }
     
