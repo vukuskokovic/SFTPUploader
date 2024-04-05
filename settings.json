@@ -1,0 +1,18 @@
+{
+  "IntervalMs": 100,
+  "RemoteFolder": "/home/luca/Test",
+  "LocalFolder": "C:\\Users\\vuk prono zvezda\\Desktop\\test",
+  "Ignore": [],
+  "ConnectionSettings": {
+    "Url": "luka.getremail.com",
+    "Username": "luca",
+    "PortNumber": 22,
+    "Password": null,
+    "GiveUpSecurityAndAcceptAnySshHostKey": false,
+    "PrivateKeyPassphrase": null,
+    "SshPrivateKey": null,
+    "SshPrivateKeyPath": "C:\\Users\\vuk prono zvezda\\Desktop\\private_key.ppk",
+    "SshHostKeyFingerprint": "ssh-rsa 2048 7fJHppYBCshYl6zhUEcckEUMaAc2bheq8+Hw2Iys8gg",
+    "Secure": false
+  }
+}
